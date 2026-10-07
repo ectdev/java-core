@@ -1,0 +1,252 @@
+BoundedBuffer: put waits with "if" instead of "while" (a woken producer does not re-test for room)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+            while (count == items.length) {
+                notFull.await();
+            }
+---
+            if (count == items.length) {
+                notFull.await();
+            }
+===
+BoundedBuffer: take waits with "if" instead of "while" (a woken consumer does not re-test for an element)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+            while (count == 0) {
+                notEmpty.await();
+            }
+---
+            if (count == 0) {
+                notEmpty.await();
+            }
+===
+BoundedBuffer: a put never signals waiting consumers (lost wakeup)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        notEmpty.signal(); // one new element can satisfy one waiting consumer
+---
+===
+BoundedBuffer: a take never signals waiting producers (lost wakeup)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        notFull.signal(); // one freed slot can satisfy one waiting producer
+---
+===
+BoundedBuffer: poll tests the clock before the condition (a zero timeout ignores an element that is there)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        long remaining = unit.toNanos(timeout);
+        lock.lockInterruptibly();
+        try {
+            while (count == 0) {
+                if (remaining <= 0L) {
+                    return null;
+                }
+                remaining = notEmpty.awaitNanos(remaining);
+            }
+            return dequeue();
+---
+        long remaining = unit.toNanos(timeout);
+        lock.lockInterruptibly();
+        try {
+            if (remaining <= 0L) {
+                return null;
+            }
+            while (count == 0) {
+                remaining = notEmpty.awaitNanos(remaining);
+                if (remaining <= 0L) {
+                    return null;
+                }
+            }
+            return dequeue();
+===
+BoundedBuffer: offer waits without a timeout
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+                remaining = notFull.awaitNanos(remaining);
+---
+                notFull.await();
+===
+BoundedBuffer: the tail index does not wrap around the array
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        if (++tail == items.length) {
+            tail = 0;
+        }
+---
+        tail++;
+===
+BoundedBuffer: the head index does not wrap around the array
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        if (++head == items.length) {
+            head = 0;
+        }
+---
+        head++;
+===
+BoundedBuffer: a taken element stays referenced from the array
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        items[head] = null; // do not keep a taken element reachable from the buffer
+---
+===
+BoundedBuffer: put ignores interruption while waiting for the lock
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/BoundedBuffer.java
+---
+        Objects.requireNonNull(element, "element");
+        lock.lockInterruptibly();
+        try {
+            while (count == items.length) {
+                notFull.await();
+            }
+---
+        Objects.requireNonNull(element, "element");
+        lock.lock();
+        try {
+            while (count == items.length) {
+                notFull.awaitUninterruptibly();
+            }
+===
+TokenBucket: a permit is granted when the bucket holds exactly as much as is needed only if strictly more
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        if (storedNanos < needed) {
+---
+        if (storedNanos <= needed) {
+===
+TokenBucket: a full-up refill is not clamped at the boundary (elapsed > instead of >=)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        if (elapsed >= ceilDiv(missing, refillPerSecond)) {
+---
+        if (elapsed > ceilDiv(missing, refillPerSecond)) {
+===
+TokenBucket: the wait is rounded down instead of up
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        return missing <= 0 ? 0 : ceilDiv(missing, refillPerSecond);
+---
+        return missing <= 0 ? 0 : missing / refillPerSecond;
+===
+TokenBucket: a clock that goes backwards takes permits away
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        if (elapsed <= 0) {
+---
+        if (elapsed == 0) {
+===
+TokenBucket: the reading is not refreshed when the clock goes backwards
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        long elapsed = now - lastReading; // a difference of two nanoTime readings is valid even across a wrap
+        lastReading = now;
+        if (elapsed <= 0) {
+            return; // no time passed, or the clock went backwards: never take permits away
+        }
+---
+        long elapsed = now - lastReading; // a difference of two nanoTime readings is valid even across a wrap
+        if (elapsed <= 0) {
+            return; // no time passed, or the clock went backwards: never take permits away
+        }
+        lastReading = now;
+===
+TokenBucket: the refill arithmetic can overflow on a long gap
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        if (elapsed >= ceilDiv(missing, refillPerSecond)) {
+            storedNanos = capacityNanos;
+        } else {
+            storedNanos += elapsed * refillPerSecond; // strictly less than `missing`: neither overflows nor overfills
+        }
+---
+        storedNanos = Math.min(capacityNanos, storedNanos + elapsed * refillPerSecond);
+===
+TokenBucket: more permits than the capacity are accepted
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+        if (permits < 1 || permits > capacity) {
+---
+        if (permits < 1) {
+===
+TokenBucket: tryAcquire is not synchronized
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+    public synchronized boolean tryAcquire(long permits) {
+---
+    public boolean tryAcquire(long permits) {
+===
+TokenBucket: refill is slower than the stated rate
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/TokenBucket.java
+---
+            storedNanos += elapsed * refillPerSecond; // strictly less than `missing`: neither overflows nor overfills
+---
+            storedNanos += elapsed * refillPerSecond / 2;
+===
+Memoizer: the value is computed before it is published (check-then-act: concurrent callers all compute)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/Memoizer.java
+---
+            task = cache.putIfAbsent(key, mine);
+            if (task == null) { // we won the race to publish: the work is ours to run
+                task = mine;
+                mine.run();
+            }
+---
+            mine.run();
+            cache.put(key, mine);
+            task = mine;
+===
+Memoizer: a failed computation stays cached
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/Memoizer.java
+---
+            cache.remove(key, task); // forget the failure; only this task, never a newer one
+---
+===
+Memoizer: a null result is cached instead of being a failure
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/Memoizer.java
+---
+new FutureTask<>(() -> Objects.requireNonNull(compute.apply(key), "compute returned null"))
+---
+new FutureTask<>(() -> compute.apply(key))
+===
+Memoizer: the original exception is wrapped
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/Memoizer.java
+---
+            if (cause instanceof RuntimeException unchecked) {
+                throw unchecked;
+            }
+---
+            if (cause instanceof RuntimeException unchecked) {
+                throw new IllegalStateException(unchecked);
+            }
+===
+Memoizer: keys are computed one at a time (a method-wide lock)
+---
+concurrency/src/main/java/io/github/ectdev/concurrency/Memoizer.java
+---
+    public V get(K key) throws InterruptedException {
+---
+    public synchronized V get(K key) throws InterruptedException {

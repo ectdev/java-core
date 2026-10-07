@@ -16,6 +16,7 @@ version is the one to use in real code. What is here is the reasoning, and the e
 | Module | What is built | What it is checked against |
 | --- | --- | --- |
 | [`collections`](collections/README.md) | A dynamic array, a chained hash map, an LRU cache and a binary heap | `ArrayList`, `HashMap`, `LinkedHashMap` and `PriorityQueue`, over random operation sequences |
+| [`concurrency`](concurrency/README.md) | A bounded blocking buffer, a token-bucket rate limiter and a compute-once memoizer | A fake clock, thread-state waits instead of sleeps, a conservation property under contention, and a race harness proven able to fail |
 
 ## Build and test
 
