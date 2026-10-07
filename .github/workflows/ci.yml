@@ -1,0 +1,44 @@
+# Every push to main and every pull request: compile with warnings as errors, then run every test.
+#
+# The matrix builds on JDK 21, the version the code targets, and on JDK 25, the current LTS. The code is
+# compiled with `--release 21` on both, so a pass on 25 also shows the Java 21 API surface is respected.
+# No secrets, no network service and no cache outside Maven's own dependency cache are involved.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: JDK ${{ matrix.java }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [21, 25]
+
+    steps:
+      # Third-party actions are pinned to a commit, with the release it was in alongside.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      # The wrapper pins the Maven version (3.9.11), so CI and a fresh clone build with the same one.
+      - name: Build and test
+        run: ./mvnw -B -ntp verify
