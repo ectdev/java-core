@@ -20,6 +20,10 @@
     </license>
   </licenses>
 
+  <modules>
+    <module>collections</module>
+  </modules>
+
   <properties>
     <!-- The release flag (rather than source and target) also pins the API surface: code that compiles
          here compiles against the Java 21 class library, whatever JDK builds it. -->
