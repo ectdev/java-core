@@ -1,0 +1,538 @@
+JsonParser: a digit is any Unicode digit (a fullwidth one-two-three would parse as a number)
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        return c >= '0' && c <= '9';
+---
+        return Character.isDigit(c);
+===
+JsonParser: hexadecimal digits come from Character.digit (fullwidth digits would be accepted in an escape)
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            int digit = hexValue(text.charAt(pos + i));
+---
+            int digit = Character.digit(text.charAt(pos + i), 16);
+===
+JsonParser: uppercase hex digits are off by one
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            return c - 'A' + 10;
+---
+            return c - 'A' + 11;
+===
+JsonParser: leading zeros are no longer refused ("01")
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            if (pos < text.length() && isDigit(text.charAt(pos))) {
+                throw error("leading zeros are not allowed in a number");
+            }
+---
+===
+JsonParser: a decimal point need not be followed by a digit ("5.")
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            requireDigits("after the decimal point");
+---
+            skipDigits();
+===
+JsonParser: an exponent need not have digits ("1e")
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            requireDigits("in the exponent");
+---
+            skipDigits();
+===
+JsonParser: the exponent sign can only be plus
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            if (pos < text.length() && (text.charAt(pos) == '+' || text.charAt(pos) == '-')) {
+---
+            if (pos < text.length() && (text.charAt(pos) == '+')) {
+===
+JsonParser: only a lowercase e starts an exponent
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        if (pos < text.length() && (text.charAt(pos) == 'e' || text.charAt(pos) == 'E')) {
+---
+        if (pos < text.length() && (text.charAt(pos) == 'e')) {
+===
+JsonParser: the control-character limit is one too low (U+001F is accepted raw in a string)
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            } else if (c < 0x20) {
+---
+            } else if (c < 0x1f) {
+===
+JsonParser: DEL (U+007F) is treated as a control character
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            } else if (c < 0x20) {
+---
+            } else if (c < 0x20 || c == 0x7f) {
+===
+JsonParser: a raw lone low surrogate is accepted
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            } else if (Character.isLowSurrogate(c)) {
+---
+            } else if (Character.isLowSurrogate(c) && false) {
+===
+JsonParser: a raw high surrogate need not be followed by a low one
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+                if (pos + 1 >= text.length() || !Character.isLowSurrogate(text.charAt(pos + 1))) {
+---
+                if (pos + 1 >= text.length()) {
+===
+JsonParser: a high surrogate at the very end of the text reads past it
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+                if (pos + 1 >= text.length() || !Character.isLowSurrogate(text.charAt(pos + 1))) {
+---
+                if (pos + 1 > text.length() || !Character.isLowSurrogate(text.charAt(pos + 1))) {
+===
+JsonParser: the escape for backspace is missing
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            case 'b' -> out.append('\b');
+---
+===
+JsonParser: the escape for solidus is missing
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            case '/' -> out.append('/');
+---
+===
+JsonParser: the escape for form feed produces a backspace
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            case 'f' -> out.append('\f');
+---
+            case 'f' -> out.append('\b');
+===
+JsonParser: the four-digit check is off by one (a complete but unclosed escape reports the wrong problem)
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        if (pos + 4 > text.length()) {
+---
+        if (pos + 4 >= text.length()) {
+===
+JsonParser: a high-surrogate escape accepts any second escape
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+                if (Character.isLowSurrogate(second)) {
+---
+                if (true) {
+===
+JsonParser: a lone low-surrogate escape is accepted
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        if (Character.isLowSurrogate(unit)) {
+---
+        if (false) {
+===
+JsonParser: duplicate member names are accepted
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            if (members.put(name, value) != null) {
+---
+            if (members.put(name, value) != null && false) {
+===
+JsonParser: a duplicate is reported after its value instead of at its name
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+                throw errorAt(nameStart, "duplicate member name "
+---
+                throw error("duplicate member name "
+===
+JsonParser: the nesting limit is exclusive (a document exactly at the limit is refused)
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        if (depth > maxDepth) {
+---
+        if (depth >= maxDepth) {
+===
+JsonParser: the nesting limit allows one level too many
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        if (depth > maxDepth) {
+---
+        if (depth > maxDepth + 1) {
+===
+JsonParser: elements of an array restart the depth count
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            items.add(parseValue(depth));
+---
+            items.add(parseValue(0));
+===
+JsonParser: objects are not counted towards the nesting limit
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        requireDepth(depth);
+        pos++; // the opening brace
+---
+        pos++; // the opening brace
+===
+JsonParser: text after the value is ignored
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        if (parser.pos < text.length()) {
+---
+        if (false) {
+===
+JsonParser: form feed counts as whitespace
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+---
+            if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '\f') {
+===
+JsonParser: carriage return is not whitespace
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+---
+            if (c != ' ' && c != '\t' && c != '\n') {
+===
+JsonParser: whitespace is not skipped after a colon
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            skipWhitespace();
+            JsonValue value = parseValue(depth);
+---
+            JsonValue value = parseValue(depth);
+===
+JsonParser: whitespace is not skipped between a name and its colon
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            String name = parseString();
+            skipWhitespace();
+---
+            String name = parseString();
+===
+JsonParser: a trailing comma is accepted in an array
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            items.add(parseValue(depth));
+---
+            if (peek() != ']') {
+                items.add(parseValue(depth));
+            }
+===
+JsonParser: the literal false is read as true
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+            case 'f' -> literal("false", JsonBoolean.FALSE);
+---
+            case 'f' -> literal("false", JsonBoolean.TRUE);
+===
+JsonParser: a number's sign is read but not kept
+---
+json/src/main/java/io/github/ectdev/json/JsonParser.java
+---
+        int start = pos;
+        if (text.charAt(pos) == '-') {
+            pos++;
+        }
+---
+        if (text.charAt(pos) == '-') {
+            pos++;
+        }
+        int start = pos;
+===
+JsonParseException: lines are counted at carriage returns as well
+---
+json/src/main/java/io/github/ectdev/json/JsonParseException.java
+---
+            if (source.charAt(i) == '\n') {
+                line++;
+            }
+---
+            if (source.charAt(i) == '\n' || source.charAt(i) == '\r') {
+                line++;
+            }
+===
+JsonParseException: the column is zero-based
+---
+json/src/main/java/io/github/ectdev/json/JsonParseException.java
+---
+        return offset - lineStart + 1;
+---
+        return offset - lineStart;
+===
+JsonWriter: the backslash is not escaped
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+                case '\\' -> out.append("\\\\");
+---
+                case '\\' -> out.append("\\");
+===
+JsonWriter: the quote is not escaped
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+                case '"' -> out.append("\\\"");
+---
+                case '"' -> out.append("\"");
+===
+JsonWriter: the control-character limit is one too low (U+001F is written raw)
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+                    if (c < 0x20) {
+---
+                    if (c < 0x1f) {
+===
+JsonWriter: the escape of a control character uses uppercase hex digits
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+                        out.append("\\u%04x".formatted((int) c));
+---
+                        out.append("\\u%04X".formatted((int) c));
+===
+JsonWriter: DEL is escaped although the grammar does not require it
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+                    if (c < 0x20) {
+---
+                    if (c < 0x20 || c == 0x7f) {
+===
+JsonWriter: compact text gets a space after the colon
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+            out.append(indent > 0 ? ": " : ":");
+---
+            out.append(": ");
+===
+JsonWriter: the indent is one level too deep
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+        out.repeat(' ', indent * level);
+---
+        out.repeat(' ', indent * (level + 1));
+===
+JsonWriter: an empty array is not kept on one line
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+        if (items.isEmpty()) {
+            out.append("[]");
+            return;
+        }
+---
+===
+JsonWriter: an empty object is not kept on one line
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+        if (members.isEmpty()) {
+            out.append("{}");
+            return;
+        }
+---
+===
+JsonWriter: numbers are written in plain notation (a large exponent becomes a long run of zeros)
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+            case JsonNumber(BigDecimal number) -> out.append(number.toString());
+---
+            case JsonNumber(BigDecimal number) -> out.append(number.toPlainString());
+===
+JsonWriter: a negative indent is accepted
+---
+json/src/main/java/io/github/ectdev/json/JsonWriter.java
+---
+        if (indent < 0) {
+---
+        if (indent < -1000) {
+===
+JsonPointer: the escapes are decoded with two replace calls in the wrong order
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+        if (token.indexOf('~') < 0) {
+            return token;
+        }
+---
+        if (true) {
+            return token.replace("~0", "~").replace("~1", "/");
+        }
+===
+JsonPointer: trailing empty tokens are dropped
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+        String[] tokens = pointer.substring(1).split("/", -1);
+---
+        String[] tokens = pointer.substring(1).split("/");
+===
+JsonPointer: a leading zero is allowed in an array index
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+        if (token.charAt(0) == '0') {
+            return length == 1 ? 0 : -1;
+        }
+---
+===
+JsonPointer: a ten-digit index (which can overflow) is parsed
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+        if (length == 0 || length > 9) {
+---
+        if (length == 0 || length > 10) {
+===
+JsonPointer: an index below zero is not checked
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+                yield index >= 0 && index < items.size() ? items.get(index) : null;
+---
+                yield index < items.size() ? items.get(index) : null;
+===
+JsonPointer: a non-digit below the digit range is not noticed in an index
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+            if (c < '0' || c > '9') {
+---
+            if (c > '9') {
+===
+JsonPointer: a trailing tilde is read as an escape of a slash
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+            char next = i + 1 < token.length() ? token.charAt(i + 1) : '\0';
+---
+            char next = i + 1 < token.length() ? token.charAt(i + 1) : '1';
+===
+JsonPointer: a malformed token is only noticed if the walk reaches it
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+        for (int i = 0; i < tokens.length; i++) {
+            tokens[i] = unescape(tokens[i]);
+        }
+        JsonValue current = document;
+        for (String token : tokens) {
+            current = step(current, token);
+---
+        JsonValue current = document;
+        for (String token : tokens) {
+            current = step(current, unescape(token));
+===
+JsonPointer: the empty pointer leads nowhere instead of to the whole document
+---
+json/src/main/java/io/github/ectdev/json/JsonPointer.java
+---
+        if (pointer.isEmpty()) {
+            return Optional.of(document);
+        }
+---
+        if (pointer.isEmpty()) {
+            return Optional.empty();
+        }
+===
+JsonString: an unpaired surrogate is accepted
+---
+json/src/main/java/io/github/ectdev/json/JsonString.java
+---
+            } else if (Character.isSurrogate(c)) {
+---
+            } else if (Character.isSurrogate(c) && false) {
+===
+JsonString: only an unpaired high surrogate is refused
+---
+json/src/main/java/io/github/ectdev/json/JsonString.java
+---
+            } else if (Character.isSurrogate(c)) {
+---
+            } else if (Character.isHighSurrogate(c)) {
+===
+JsonString: a high surrogate at the end of the text reads past it
+---
+json/src/main/java/io/github/ectdev/json/JsonString.java
+---
+            if (Character.isHighSurrogate(c) && i + 1 < value.length() && Character.isLowSurrogate(value.charAt(i + 1))) {
+---
+            if (Character.isHighSurrogate(c) && i + 1 <= value.length() && Character.isLowSurrogate(value.charAt(i + 1))) {
+===
+JsonArray: the list is not copied
+---
+json/src/main/java/io/github/ectdev/json/JsonArray.java
+---
+        items = List.copyOf(items); // immutable, and rejects null elements
+---
+===
+JsonObject: the map is copied but can still be changed through the accessor
+---
+json/src/main/java/io/github/ectdev/json/JsonObject.java
+---
+        members = Collections.unmodifiableMap(copy);
+---
+        members = copy;
+===
+JsonObject: the copy does not keep the insertion order
+---
+json/src/main/java/io/github/ectdev/json/JsonObject.java
+---
+        Map<String, JsonValue> copy = new LinkedHashMap<>();
+        members.forEach(
+---
+        Map<String, JsonValue> copy = new java.util.TreeMap<>();
+        members.forEach(
+===
+JsonObject: of() accepts a duplicate name
+---
+json/src/main/java/io/github/ectdev/json/JsonObject.java
+---
+            if (members.put((String) namesAndValues[i], (JsonValue) namesAndValues[i + 1]) != null) {
+---
+            if (members.put((String) namesAndValues[i], (JsonValue) namesAndValues[i + 1]) != null && false) {
+===
+JsonBoolean: of() answers true for false
+---
+json/src/main/java/io/github/ectdev/json/JsonBoolean.java
+---
+        return value ? TRUE : FALSE;
+---
+        return value ? TRUE : TRUE;

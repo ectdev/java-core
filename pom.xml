@@ -23,6 +23,7 @@
   <modules>
     <module>collections</module>
     <module>concurrency</module>
+    <module>json</module>
   </modules>
 
   <properties>
