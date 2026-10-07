@@ -1,0 +1,238 @@
+DynamicArray: remove leaves the vacated slot pointing at the removed object (memory leak)
+---
+collections/src/main/java/io/github/ectdev/collections/DynamicArray.java
+---
+        elements[--size] = null; // do not keep the removed object reachable
+---
+        --size;
+===
+DynamicArray: grows by a factor of 2 instead of 1.5
+---
+collections/src/main/java/io/github/ectdev/collections/DynamicArray.java
+---
+        long grown = (long) oldCapacity + (oldCapacity >> 1) + 1;
+---
+        long grown = (long) oldCapacity * 2 + 1;
+===
+DynamicArray: insert by index does not bump modCount (iterators miss the change)
+---
+collections/src/main/java/io/github/ectdev/collections/DynamicArray.java
+---
+        elements[index] = element;
+        size++;
+        modCount++;
+---
+        elements[index] = element;
+        size++;
+===
+DynamicArray: iterator.remove does not refresh the iterator's expected modCount
+---
+collections/src/main/java/io/github/ectdev/collections/DynamicArray.java
+---
+            lastReturned = -1;
+            expectedModCount = modCount;
+---
+            lastReturned = -1;
+===
+DynamicArray: insert rejects index == size (off by one)
+---
+collections/src/main/java/io/github/ectdev/collections/DynamicArray.java
+---
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException("Index " + index + " out of bounds for insertion into length " + size);
+---
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index " + index + " out of bounds for insertion into length " + size);
+===
+DynamicArray: capacity arithmetic in int, so it wraps near Integer.MAX_VALUE
+---
+collections/src/main/java/io/github/ectdev/collections/DynamicArray.java
+---
+        long grown = (long) oldCapacity + (oldCapacity >> 1) + 1;
+        long target = Math.max(grown, minCapacity);
+---
+        long grown = oldCapacity + (oldCapacity >> 1) + 1;
+        long target = Math.max((int) grown, minCapacity);
+===
+ChainedHashMap: the hash does not fold the high bits into the low bits
+---
+collections/src/main/java/io/github/ectdev/collections/ChainedHashMap.java
+---
+        return h ^ (h >>> 16);
+---
+        return h;
+===
+ChainedHashMap: resizes at size >= threshold instead of size > threshold
+---
+collections/src/main/java/io/github/ectdev/collections/ChainedHashMap.java
+---
+        if (++size > threshold) {
+---
+        if (++size >= threshold) {
+===
+ChainedHashMap: resize moves every node into bucket 0
+---
+collections/src/main/java/io/github/ectdev/collections/ChainedHashMap.java
+---
+                int index = indexFor(node.hash, grown.length);
+---
+                int index = 0;
+===
+ChainedHashMap: remove does not relink the previous node in a chain
+---
+collections/src/main/java/io/github/ectdev/collections/ChainedHashMap.java
+---
+                    previous.next = node.next;
+---
+                    previous.next = previous.next;
+===
+ChainedHashMap: put never finds an existing key, so it adds a second node
+---
+collections/src/main/java/io/github/ectdev/collections/ChainedHashMap.java
+---
+            if (node.hash == hash && Objects.equals(node.key, key)) {
+                V old = node.value;
+---
+            if (node.hash == hash && Objects.equals(node.key, key) && false) {
+                V old = node.value;
+===
+ChainedHashMap: lookup compares hashes only, so colliding distinct keys merge
+---
+collections/src/main/java/io/github/ectdev/collections/ChainedHashMap.java
+---
+    private Node<K, V> find(Object key) {
+        int hash = hash(key);
+        for (Node<K, V> node = table[indexFor(hash, table.length)]; node != null; node = node.next) {
+            if (node.hash == hash && Objects.equals(node.key, key)) {
+---
+    private Node<K, V> find(Object key) {
+        int hash = hash(key);
+        for (Node<K, V> node = table[indexFor(hash, table.length)]; node != null; node = node.next) {
+            if (node.hash == hash) {
+===
+LruCache: get does not refresh recency
+---
+collections/src/main/java/io/github/ectdev/collections/LruCache.java
+---
+        moveToFront(node);
+        return node.value;
+    }
+
+    /** Like {@link #get}
+---
+        return node.value;
+    }
+
+    /** Like {@link #get}
+===
+LruCache: overwriting does not refresh recency
+---
+collections/src/main/java/io/github/ectdev/collections/LruCache.java
+---
+            existing.value = value;
+            moveToFront(existing);
+---
+            existing.value = value;
+===
+LruCache: evicts the most recently used entry instead of the least
+---
+collections/src/main/java/io/github/ectdev/collections/LruCache.java
+---
+            Node<K, V> eldest = tail.previous;
+---
+            Node<K, V> eldest = head.next;
+===
+LruCache: evicts at size >= capacity, keeping one entry too few
+---
+collections/src/main/java/io/github/ectdev/collections/LruCache.java
+---
+        if (index.size() > capacity) {
+---
+        if (index.size() >= capacity) {
+===
+LruCache: an explicit remove also fires the eviction callback
+---
+collections/src/main/java/io/github/ectdev/collections/LruCache.java
+---
+        unlink(node);
+        return node.value;
+    }
+
+    public void clear() {
+---
+        unlink(node);
+        onEvict.accept(node.key, node.value);
+        return node.value;
+    }
+
+    public void clear() {
+===
+MinHeap: siftDown only considers the left child
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+            if (right < size && order.compare(at(right), at(child)) < 0) {
+                child = right;
+            }
+---
+===
+MinHeap: heapify starts at the wrong parent and skips half the nodes
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+        for (int parent = (size >>> 1) - 1; parent >= 0; parent--) {
+---
+        for (int parent = (size >>> 2) - 1; parent >= 0; parent--) {
+===
+MinHeap: poll does not shrink the size
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+        size--;
+        if (size > 0) {
+---
+        if (size > 0) {
+
+===
+MinHeap: siftUp uses the wrong parent index (child / 2 instead of (child - 1) / 2)
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+            int parent = (child - 1) >>> 1;
+            if (order.compare(cast(moving), at(parent)) >= 0) {
+---
+            int parent = child >>> 1;
+            if (order.compare(cast(moving), at(parent)) >= 0) {
+===
+MinHeap: siftUp never moves anything up
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+            if (order.compare(cast(moving), at(parent)) >= 0) {
+                break;
+            }
+---
+            if (true) {
+                break;
+            }
+===
+MinHeap: the isHeap invariant check always reports true
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+            if (order.compare(at(child), at((child - 1) >>> 1)) < 0) {
+                return false;
+            }
+---
+            if (false) {
+                return false;
+            }
+===
+MinHeap: siftDown picks the larger child
+---
+collections/src/main/java/io/github/ectdev/collections/MinHeap.java
+---
+            if (right < size && order.compare(at(right), at(child)) < 0) {
+---
+            if (right < size && order.compare(at(right), at(child)) > 0) {
+
