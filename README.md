@@ -13,10 +13,15 @@ version is the one to use in real code. What is here is the reasoning, and the e
 
 ## Modules
 
-| Module | What is built | What it is checked against |
-| --- | --- | --- |
-| [`collections`](collections/README.md) | A dynamic array, a chained hash map, an LRU cache and a binary heap | `ArrayList`, `HashMap`, `LinkedHashMap` and `PriorityQueue`, over random operation sequences |
-| [`concurrency`](concurrency/README.md) | A bounded blocking buffer, a token-bucket rate limiter and a compute-once memoizer | A fake clock, thread-state waits instead of sleeps, a conservation property under contention, and a race harness proven able to fail |
+| Module | What is built | What it is checked against | Tests | Mutants |
+| --- | --- | --- | ---: | ---: |
+| [`collections`](collections/README.md) | A dynamic array, a chained hash map, an LRU cache and a binary heap | `ArrayList`, `HashMap`, `LinkedHashMap` and `PriorityQueue`, over random operation sequences | 128 | 24 |
+| [`concurrency`](concurrency/README.md) | A bounded blocking buffer, a token-bucket rate limiter and a compute-once memoizer | A fake clock, thread-state waits instead of sleeps, a conservation property under contention, and a race harness proven able to fail | 53 | 24 |
+| [`json`](json/README.md) | A strict RFC 8259 parser and writer on sealed types, and RFC 6901 JSON Pointer | The RFCs' own examples and tables, hand-counted error positions, seeded round trips and damaged-text fuzzing | 221 | 63 |
+| [`ledger`](ledger/README.md) | Money in integer minor units with exact allocation, a FIFO lot book, and a trade timeline that refuses to go short | Hand-worked cases, a unit-by-unit oracle that shares no arithmetic, and conservation laws where rounding happens | 171 | 48 |
+
+"Mutants" is the number of deliberately broken copies of the code that the tests are required to notice; every one is
+caught. Test counts are a snapshot (`./mvnw verify` prints the current ones).
 
 ## Build and test
 
@@ -24,7 +29,7 @@ Requirements: JDK 21 or newer. Maven is not needed; the wrapper downloads the pi
 
 ```sh
 ./mvnw verify                 # compile with every lint warning as an error, then run all tests
-./mvnw -pl collections test   # one module
+./mvnw -pl json test          # one module
 ```
 
 On Windows use `mvnw.cmd`. If `java -version` reports something older than 21, the build stops at once with a

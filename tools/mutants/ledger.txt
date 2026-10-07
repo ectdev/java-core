@@ -1,0 +1,383 @@
+Money.allocate: ties go to the later party instead of the earlier one
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            return byFraction != 0 ? byFraction : Integer.compare(a, b);
+---
+            return byFraction != 0 ? byFraction : Integer.compare(b, a);
+===
+Money.allocate: the leftover units go to the smallest remainders instead of the largest
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            int byFraction = remainders[b].compareTo(remainders[a]);
+---
+            int byFraction = remainders[a].compareTo(remainders[b]);
+===
+Money.allocate: a negative total is allocated as it is instead of by its absolute value
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        BigInteger total = BigInteger.valueOf(minor).abs();
+---
+        BigInteger total = BigInteger.valueOf(minor);
+===
+Money.allocate: the shares of a negative total keep their positive sign
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            result.add(new Money((minor < 0 ? share.negate() : share).longValueExact(), currency));
+---
+            result.add(new Money(share.longValueExact(), currency));
+===
+Money.allocate: the product of total and weight is computed in a long (overflows for large amounts)
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            BigInteger[] quotientAndRemainder = total.multiply(BigInteger.valueOf(weights[i])).divideAndRemainder(sum);
+---
+            BigInteger[] quotientAndRemainder = BigInteger.valueOf(total.longValue() * weights[i]).divideAndRemainder(sum);
+===
+Money.allocate: a negative weight is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            if (weight < 0) {
+---
+            if (weight < -1) {
+===
+Money.allocate: all-zero weights reach the division
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        if (sum.signum() == 0) {
+---
+        if (false) {
+===
+Money.allocate: an empty weight list is no longer reported as such
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        if (weights.length == 0) {
+---
+        if (false) {
+===
+Money.allocate: the leftover units are one too few
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        for (int k = 0; k < leftover; k++) {
+---
+        for (int k = 0; k < leftover - 1; k++) {
+===
+Money.split: zero parts is no longer reported as such
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        if (parts < 1) {
+---
+        if (parts < 0) {
+===
+Money.parse: a plus sign is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+Pattern.compile("-?[0-9]+(\\.[0-9]+)?")
+---
+Pattern.compile("[-+]?[0-9]+(\\.[0-9]+)?")
+===
+Money.parse: a decimal point with no digits after it is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+Pattern.compile("-?[0-9]+(\\.[0-9]+)?")
+---
+Pattern.compile("-?[0-9]+(\\.[0-9]*)?")
+===
+Money.parse: extra decimals are silently rounded away
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            exact = new BigDecimal(text).setScale(digits, RoundingMode.UNNECESSARY);
+---
+            exact = new BigDecimal(text).setScale(digits, RoundingMode.HALF_EVEN);
+===
+Money.of: the rounding mode asked for is ignored
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            return new Money(major.setScale(digits, mode).unscaledValue().longValueExact(), currency);
+---
+            return new Money(major.setScale(digits, RoundingMode.HALF_EVEN).unscaledValue().longValueExact(), currency);
+===
+Money.multiply: the rounding mode asked for is ignored
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+            return new Money(BigDecimal.valueOf(minor).multiply(factor).setScale(0, mode).longValueExact(), currency);
+---
+            return new Money(BigDecimal.valueOf(minor).multiply(factor).setScale(0, RoundingMode.HALF_EVEN).longValueExact(), currency);
+===
+Money.plus: overflow wraps around
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        return new Money(Math.addExact(minor, other.minor), currency);
+---
+        return new Money(minor + other.minor, currency);
+===
+Money.minus: overflow wraps around
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        return new Money(Math.subtractExact(minor, other.minor), currency);
+---
+        return new Money(minor - other.minor, currency);
+===
+Money.times: overflow wraps around
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        return new Money(Math.multiplyExact(minor, factor), currency);
+---
+        return new Money(minor * factor, currency);
+===
+Money.negate: the most negative amount wraps to itself
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        return new Money(Math.negateExact(minor), currency);
+---
+        return new Money(-minor, currency);
+===
+Money.compareTo: compares by subtraction, which overflows
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        return Long.compare(minor, other.minor);
+---
+        return (int) (minor - other.minor);
+===
+Money: amounts of different currencies can be combined
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        if (!currency.equals(other.currency)) {
+---
+        if (false) {
+===
+Money.toMajor: one decimal too many
+---
+ledger/src/main/java/io/github/ectdev/ledger/Money.java
+---
+        return BigDecimal.valueOf(minor, currency.getDefaultFractionDigits());
+---
+        return BigDecimal.valueOf(minor, currency.getDefaultFractionDigits() + 1);
+===
+LotBook: the newest lot is consumed first (last in, first out)
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        next.add(new Lot(amount, cost));
+---
+        next.add(0, new Lot(amount, cost));
+===
+LotBook: a partly used lot's share of cost is rounded half-up
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+                    .divide(lot.quantity(), 0, RoundingMode.HALF_EVEN)
+---
+                    .divide(lot.quantity(), 0, RoundingMode.HALF_UP)
+===
+LotBook: a partly used lot's share of cost is rounded down
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+                    .divide(lot.quantity(), 0, RoundingMode.HALF_EVEN)
+---
+                    .divide(lot.quantity(), 0, RoundingMode.DOWN)
+===
+LotBook: a purchase's cost is rounded half-up
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        Money cost = Money.of(amount.multiply(unitPrice), currency, RoundingMode.HALF_EVEN).plus(fee);
+---
+        Money cost = Money.of(amount.multiply(unitPrice), currency, RoundingMode.HALF_UP).plus(fee);
+===
+LotBook: a sale's proceeds are rounded half-up
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        Money proceeds = Money.of(wanted.multiply(unitPrice), currency, RoundingMode.HALF_EVEN);
+---
+        Money proceeds = Money.of(wanted.multiply(unitPrice), currency, RoundingMode.HALF_UP);
+===
+LotBook: a partly used lot keeps its whole cost (money is created)
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+                remaining.add(new Lot(lot.quantity().subtract(toTake), lot.cost().minus(share)));
+---
+                remaining.add(new Lot(lot.quantity().subtract(toTake), lot.cost()));
+===
+LotBook: a partly used lot keeps its whole quantity
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+                remaining.add(new Lot(lot.quantity().subtract(toTake), lot.cost().minus(share)));
+---
+                remaining.add(new Lot(lot.quantity(), lot.cost().minus(share)));
+===
+LotBook: a lot that is exactly used up is treated as partly used
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+            } else if (lot.quantity().compareTo(toTake) <= 0) {
+---
+            } else if (lot.quantity().compareTo(toTake) < 0) {
+===
+LotBook: lots behind the one a sale stops in are dropped
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+            if (toTake.signum() == 0) {
+                remaining.add(lot);
+---
+            if (toTake.signum() == 0) {
+                continue;
+===
+LotBook: selling exactly what is held is refused
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        if (wanted.compareTo(held) > 0) {
+---
+        if (wanted.compareTo(held) >= 0) {
+===
+LotBook: an unrepresentable profit is only noticed after the book has changed
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        sale.realized(); // surfaces an overflow now, while the book is still untouched
+---
+===
+LotBook: a negative fee is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        if (fee.isNegative()) {
+---
+        if (false) {
+===
+LotBook: a fee in another currency is no longer reported as such
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        if (!fee.currency().equals(currency)) {
+---
+        if (false) {
+===
+LotBook: a negative price is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        if (unitPrice.signum() < 0) {
+---
+        if (unitPrice.signum() < -1) {
+===
+LotBook: a quantity of zero is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/LotBook.java
+---
+        if (canonical.signum() <= 0) {
+---
+        if (canonical.signum() < 0) {
+===
+Lot: a quantity keeps a negative scale (1E+1 is not 10)
+---
+ledger/src/main/java/io/github/ectdev/ledger/Lot.java
+---
+        return stripped.scale() < 0 ? stripped.setScale(0) : stripped;
+---
+        return stripped;
+===
+Lot: a negative cost is accepted
+---
+ledger/src/main/java/io/github/ectdev/ledger/Lot.java
+---
+        if (cost.isNegative()) {
+---
+        if (false) {
+===
+Sale.realized: the fee is not subtracted
+---
+ledger/src/main/java/io/github/ectdev/ledger/Sale.java
+---
+        return proceeds.minus(fee).minus(costOfSold);
+---
+        return proceeds.minus(costOfSold);
+===
+Sale.quantity: only the last part is counted
+---
+ledger/src/main/java/io/github/ectdev/ledger/Sale.java
+---
+            total = total.add(part.quantity());
+---
+            total = part.quantity();
+===
+TradeJournal: trades are not put in date order
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+        ordered.sort(Comparator.comparing(Trade::at)); // List.sort is stable: equal instants keep their listed order
+---
+===
+TradeJournal: trades are applied newest first
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+        ordered.sort(Comparator.comparing(Trade::at)); // List.sort is stable: equal instants keep their listed order
+---
+        ordered.sort(Comparator.comparing(Trade::at).reversed());
+===
+TradeJournal: at the same instant a purchase always comes first, whatever the listed order
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+        ordered.sort(Comparator.comparing(Trade::at)); // List.sort is stable: equal instants keep their listed order
+---
+        ordered.sort(Comparator.comparing(Trade::at).thenComparing(Trade::side));
+===
+TradeJournal: the short-sale error is not translated
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+                        throw new ShortSaleException(trade.at(), e);
+---
+                        throw e;
+===
+TradeJournal: the short-sale error names the wrong moment
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+                        throw new ShortSaleException(trade.at(), e);
+---
+                        throw new ShortSaleException(Instant.EPOCH, e);
+===
+TradeJournal: the sales are not collected
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+                        sales.add(book.sell(trade.quantity(), trade.unitPrice(), trade.fee()));
+---
+                        book.sell(trade.quantity(), trade.unitPrice(), trade.fee());
+===
+TradeJournal.Replay.realized: only the last sale is counted
+---
+ledger/src/main/java/io/github/ectdev/ledger/TradeJournal.java
+---
+                total = total.plus(sale.realized());
+---
+                total = sale.realized();

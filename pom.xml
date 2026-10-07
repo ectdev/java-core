@@ -24,6 +24,7 @@
     <module>collections</module>
     <module>concurrency</module>
     <module>json</module>
+    <module>ledger</module>
   </modules>
 
   <properties>

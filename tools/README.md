@@ -42,6 +42,15 @@ collections/src/main/java/io/github/ectdev/collections/LruCache.java
         return node.value;
 ```
 
+### The mutant files that exist
+
+| Module | Mutants | Result |
+| --- | --- | --- |
+| `collections` | 24 | all killed (one test gap fixed, one equivalent mutant replaced; both described below) |
+| `concurrency` | 24 | all killed (a missing test for interrupting a blocked `put` was added; one near-equivalent mutant was replaced) |
+| `json` | 63 | all killed (after one missing pointer test was added) |
+| `ledger` | 48 | all killed |
+
 ### What a survivor taught
 
 Writing these found one real hole in the first round. A mutant that dropped `modCount++` from
@@ -55,3 +64,9 @@ have, such as a wrong parent index.
 
 The mutation checks are not part of CI: they run the test suite once per mutant, which takes minutes. Run them
 after changing a module.
+
+The `json` round found a third kind of hole. Weakening the array-index scan in the JSON Pointer evaluation
+(`c < '0' || c > '9'` to `c > '9'`) survived, although the test list had a dozen invalid indexes. None of them
+happened to land on an existing element: `1.0` computes to 80, `-1` to a negative number. `1-` computes to
+10 - 3 = 7, which is a real element, so it is the token that shows the check is missing. A list of bad inputs
+proves less than it seems unless some of them are the ones a broken implementation would accept.
